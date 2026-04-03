@@ -1,0 +1,3 @@
+pdfmux>=0.1.0
+# optional but recommended — gives PyMuPDF-backed page count in frontmatter
+PyMuPDF
