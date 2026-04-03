@@ -174,8 +174,7 @@ async function fetchModels(def, baseUrl, apiKey) {
   const headers = def.modelsHeaders(baseUrl, apiKey);
   try {
     const resp = await fetch(url, { headers, signal: AbortSignal.timeout(8e3) });
-    if (!resp.ok)
-      return [];
+    if (!resp.ok) return [];
     const json = await resp.json();
     return def.parseModels(json);
   } catch (e) {
@@ -252,8 +251,7 @@ See console (Ctrl+Shift+I)`);
       if (this.settings.openAfterConvert) {
         setTimeout(() => {
           const f = this.app.vault.getAbstractFileByPath(notePath);
-          if (f instanceof import_obsidian.TFile)
-            this.app.workspace.getLeaf().openFile(f);
+          if (f instanceof import_obsidian.TFile) this.app.workspace.getLeaf().openFile(f);
         }, 800);
       }
     });
@@ -261,12 +259,9 @@ See console (Ctrl+Shift+I)`);
   // ── helpers ──────────────────────────────────────────────────────────────
   buildArgs(script, pdfPath, outFolder) {
     const args = [script, "convert", pdfPath, "--vault", outFolder, "--quality", this.settings.quality];
-    if (this.settings.schema)
-      args.push("--schema", this.settings.schema);
-    if (this.settings.chunkTokens > 0)
-      args.push("--chunk", String(this.settings.chunkTokens));
-    if (this.settings.overwrite)
-      args.push("--overwrite");
+    if (this.settings.schema) args.push("--schema", this.settings.schema);
+    if (this.settings.chunkTokens > 0) args.push("--chunk", String(this.settings.chunkTokens));
+    if (this.settings.overwrite) args.push("--overwrite");
     return args;
   }
   buildEnv() {
@@ -277,22 +272,17 @@ See console (Ctrl+Shift+I)`);
     const mdl = this.settings.llmModel;
     switch (p) {
       case "gemini":
-        if (key)
-          env["GEMINI_API_KEY"] = key;
+        if (key) env["GEMINI_API_KEY"] = key;
         break;
       case "claude":
-        if (key)
-          env["ANTHROPIC_API_KEY"] = key;
+        if (key) env["ANTHROPIC_API_KEY"] = key;
         break;
       case "openai":
-        if (key)
-          env["OPENAI_API_KEY"] = key;
-        if (url)
-          env["OPENAI_BASE_URL"] = url;
+        if (key) env["OPENAI_API_KEY"] = key;
+        if (url) env["OPENAI_BASE_URL"] = url;
         break;
       case "zai":
-        if (key)
-          env["OPENAI_API_KEY"] = key;
+        if (key) env["OPENAI_API_KEY"] = key;
         env["OPENAI_BASE_URL"] = url;
         break;
       case "lmstudio":
@@ -304,26 +294,22 @@ See console (Ctrl+Shift+I)`);
         env["OPENAI_BASE_URL"] = `${url}/v1`;
         break;
       case "anythingllm":
-        if (key)
-          env["OPENAI_API_KEY"] = key;
+        if (key) env["OPENAI_API_KEY"] = key;
         env["OPENAI_BASE_URL"] = url;
         break;
     }
-    if (mdl && p)
-      env["OPENAI_MODEL"] = mdl;
+    if (mdl && p) env["OPENAI_MODEL"] = mdl;
     return env;
   }
   effectiveBaseUrl() {
     var _a;
-    if (this.settings.llmBaseUrl.trim())
-      return this.settings.llmBaseUrl.trim();
+    if (this.settings.llmBaseUrl.trim()) return this.settings.llmBaseUrl.trim();
     const def = PROVIDERS[this.settings.llmProvider];
     return (_a = def == null ? void 0 : def.defaultUrl) != null ? _a : "";
   }
   vaultRoot() {
     const a = this.app.vault.adapter;
-    if (a instanceof import_obsidian.FileSystemAdapter)
-      return a.getBasePath();
+    if (a instanceof import_obsidian.FileSystemAdapter) return a.getBasePath();
     throw new Error("pdfmux4obsidian: not a FileSystemAdapter");
   }
   scriptPath() {
@@ -381,8 +367,7 @@ var PdfMuxSettingTab = class extends import_obsidian.PluginSettingTab {
     });
     new import_obsidian.Setting(containerEl).setName("Provider").addDropdown((d) => {
       d.addOption("", "\u2014 none \u2014");
-      for (const [id, def2] of Object.entries(PROVIDERS))
-        d.addOption(id, def2.label);
+      for (const [id, def2] of Object.entries(PROVIDERS)) d.addOption(id, def2.label);
       d.setValue(this.plugin.settings.llmProvider).onChange(async (v) => {
         this.plugin.settings.llmProvider = v;
         this.plugin.settings.llmBaseUrl = "";
@@ -394,8 +379,7 @@ var PdfMuxSettingTab = class extends import_obsidian.PluginSettingTab {
       });
     });
     const prov = this.plugin.settings.llmProvider;
-    if (!prov)
-      return this._renderBehaviour(containerEl);
+    if (!prov) return this._renderBehaviour(containerEl);
     const def = PROVIDERS[prov];
     if (def.keyRequired) {
       const keySetting = new import_obsidian.Setting(containerEl).setName("API key").setDesc("Stored in Obsidian's data.json \u2014 only sent to this provider during conversion.").addText((t) => {
@@ -441,10 +425,8 @@ var PdfMuxSettingTab = class extends import_obsidian.PluginSettingTab {
     if (this._models.length > 0) {
       modelSetting.setDesc("Fetched from provider \u2014 select one");
       modelSetting.addDropdown((d) => {
-        if (!this.plugin.settings.llmModel)
-          d.addOption("", "\u2014 select \u2014");
-        for (const m of this._models)
-          d.addOption(m, m);
+        if (!this.plugin.settings.llmModel) d.addOption("", "\u2014 select \u2014");
+        for (const m of this._models) d.addOption(m, m);
         d.setValue(this.plugin.settings.llmModel).onChange(async (v) => {
           this.plugin.settings.llmModel = v;
           await this.plugin.saveSettings();
@@ -519,8 +501,7 @@ var PdfPathModal = class extends import_obsidian.Modal {
     input.placeholder = "~/Downloads/paper.pdf  or  /path/to/invoice.pdf";
     input.style.cssText = "width:100%;margin:12px 0 16px;padding:6px 10px;font-size:14px;border-radius:4px;border:1px solid var(--background-modifier-border);";
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter")
-        this.submit(input.value);
+      if (e.key === "Enter") this.submit(input.value);
     });
     const row = contentEl.createDiv();
     row.style.cssText = "display:flex;gap:8px;justify-content:flex-end;";
@@ -531,8 +512,7 @@ var PdfPathModal = class extends import_obsidian.Modal {
   submit(raw) {
     var _a;
     const val = raw.trim().replace(/^~/, (_a = process.env.HOME) != null ? _a : "~");
-    if (!val)
-      return;
+    if (!val) return;
     this.close();
     this.onSubmit(val);
   }
