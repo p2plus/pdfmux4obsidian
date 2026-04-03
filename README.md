@@ -98,7 +98,7 @@ Every converted PDF becomes a note with YAML frontmatter Obsidian understands na
 ```markdown
 ---
 title: "research-paper"
-date: 2024-01-15
+date: 2026-04-02
 source: "/Users/you/Downloads/research-paper.pdf"
 tags: [pdf, pdfmux]
 pages: 12
