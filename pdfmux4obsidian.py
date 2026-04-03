@@ -66,6 +66,60 @@ def load_config() -> dict:
     return cfg
 
 
+# ── provider env mapping ──────────────────────────────────────────────────────
+
+# Maps our provider ID → how to set env vars so pdfmux picks up the right backend.
+# All OpenAI-compatible providers use OPENAI_API_KEY + OPENAI_BASE_URL.
+PROVIDER_CONFIGS: dict[str, dict] = {
+    "gemini":      {"key_var": "GEMINI_API_KEY",    "pdfmux_id": "gemini"},
+    "claude":      {"key_var": "ANTHROPIC_API_KEY", "pdfmux_id": "claude"},
+    "openai":      {"key_var": "OPENAI_API_KEY",    "pdfmux_id": "openai"},
+    "zai":         {"key_var": "OPENAI_API_KEY",    "pdfmux_id": "openai",
+                    "default_url": "https://api.z.ai/api/coding/paas/v4",
+                    "default_model": "glm-5.1"},
+    "lmstudio":    {"key_var": "OPENAI_API_KEY",    "pdfmux_id": "openai",
+                    "default_url": "http://localhost:1234/v1",
+                    "default_key": "lm-studio"},
+    "ollama":      {"key_var": None,                "pdfmux_id": "ollama",
+                    "default_url": "http://localhost:11434"},
+    "anythingllm": {"key_var": "OPENAI_API_KEY",    "pdfmux_id": "openai",
+                    "default_url": "http://localhost:3001/api/v1"},
+}
+
+
+def apply_provider_env(
+    provider:  str,
+    api_key:   str = "",
+    base_url:  str = "",
+    model:     str = "",
+):
+    """Set env vars so pdfmux reads the right LLM backend."""
+    cfg = PROVIDER_CONFIGS.get(provider)
+    if not cfg:
+        return
+
+    # API key
+    key_var = cfg.get("key_var")
+    if key_var:
+        val = api_key or cfg.get("default_key", "")
+        if val:
+            os.environ.setdefault(key_var, val)
+
+    # base URL (for OpenAI-compatible providers)
+    effective_url = base_url or cfg.get("default_url", "")
+    if effective_url:
+        if provider == "ollama":
+            # Ollama: pdfmux expects the OpenAI-compat path
+            os.environ.setdefault("OPENAI_BASE_URL", effective_url.rstrip("/") + "/v1")
+        else:
+            os.environ.setdefault("OPENAI_BASE_URL", effective_url)
+
+    # model
+    effective_model = model or cfg.get("default_model", "")
+    if effective_model:
+        os.environ.setdefault("OPENAI_MODEL", effective_model)
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def check_pdfmux():
@@ -258,33 +312,61 @@ def run_setup():
     if quality not in ("fast", "standard", "high"):
         quality = "standard"
 
-    print("\nLLM provider for hard pages — leave blank to skip:")
-    print("  gemini  /  claude  /  openai  /  ollama")
-    llm_provider = input("Provider [none]: ").strip()
+    print("\nLLM provider (leave blank to skip):")
+    for pid, cfg in PROVIDER_CONFIGS.items():
+        url_hint = f"  @ {cfg['default_url']}" if cfg.get("default_url") else ""
+        print(f"  {pid:<14}{url_hint}")
+    llm_provider = input("Provider [none]: ").strip().lower()
 
-    llm_key_var = llm_key_val = ""
-    if llm_provider in ("gemini", "claude", "openai"):
-        var_map     = {"gemini": "GEMINI_API_KEY", "claude": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
-        llm_key_var = var_map[llm_provider]
-        hint        = "  (already in env)" if os.environ.get(llm_key_var) else ""
-        llm_key_val = input(f"{llm_key_var}{hint}: ").strip()
+    cfg_write:  dict[str, str] = {"vault": vault, "quality": quality}
+    env_lines:  list[str]      = []
+
+    if llm_provider and llm_provider in PROVIDER_CONFIGS:
+        pcfg      = PROVIDER_CONFIGS[llm_provider]
+        key_var   = pcfg.get("key_var")
+        def_url   = pcfg.get("default_url", "")
+        def_model = pcfg.get("default_model", "")
+
+        cfg_write["llm_provider"] = llm_provider
+
+        # base URL (for OpenAI-compat providers)
+        if def_url:
+            custom_url = input(f"Base URL [{def_url}]: ").strip()
+            if custom_url and custom_url != def_url:
+                cfg_write["llm_base_url"] = custom_url
+
+        # model
+        if def_model:
+            model = input(f"Model [{def_model}]: ").strip() or def_model
+        else:
+            model = input("Model (leave blank to decide later): ").strip()
+        if model:
+            cfg_write["llm_model"] = model
+
+        # API key
+        if key_var:
+            existing = os.environ.get(key_var, "")
+            hint     = "  (already in env — press Enter to keep)" if existing else ""
+            key_val  = input(f"{key_var}{hint}: ").strip()
+            if key_val:
+                env_lines.append(f"{key_var}={key_val}")
+    elif llm_provider and llm_provider not in PROVIDER_CONFIGS:
+        print(f"  unknown provider '{llm_provider}' — skipped")
 
     # write config.yaml
     cfg_path  = SCRIPT_DIR / "config.yaml"
-    cfg_lines = [f"vault: {vault}", f"quality: {quality}"]
-    if llm_provider:
-        cfg_lines.append(f"llm_provider: {llm_provider}")
-    cfg_path.write_text("\n".join(cfg_lines) + "\n", encoding="utf-8")
+    yaml_body = "\n".join(f"{k}: {v}" for k, v in cfg_write.items()) + "\n"
+    cfg_path.write_text(yaml_body, encoding="utf-8")
     print(f"\n  wrote  {cfg_path}")
 
-    # write .env if we got a key
-    if llm_key_var and llm_key_val:
+    # write .env
+    if env_lines:
         env_path = SCRIPT_DIR / ".env"
-        env_path.write_text(f"{llm_key_var}={llm_key_val}\n", encoding="utf-8")
+        env_path.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
         print(f"  wrote  {env_path}")
 
-    print("\nDone. The Obsidian plugin will pick this up automatically.")
-    print("Or run the CLI:")
+    print("\nDone. The Obsidian plugin picks this up automatically.")
+    print("CLI usage:")
     print("  python pdfmux4obsidian.py convert file.pdf")
     print("  python pdfmux4obsidian.py watch ~/Downloads\n")
 
@@ -320,6 +402,8 @@ powered by pdfmux — https://github.com/NameetP/pdfmux (credit: NameetP)
     else:
         vault_kwargs["required"] = True
 
+    provider_choices = list(PROVIDER_CONFIGS.keys())
+
     for name, positional in (("convert", "pdf"), ("watch", "dir")):
         sp = sub.add_parser(name, help=f"{'convert a single PDF' if name=='convert' else 'watch a folder for new PDFs'}")
         sp.add_argument(positional, type=Path)
@@ -330,6 +414,15 @@ powered by pdfmux — https://github.com/NameetP/pdfmux (credit: NameetP)
                         default=cfg.get("quality", "standard"))
         sp.add_argument("--chunk", dest="max_tokens", type=int, metavar="TOKENS")
         sp.add_argument("--overwrite", action="store_true")
+        sp.add_argument("--llm-provider", choices=provider_choices,
+                        default=cfg.get("llm_provider"),
+                        help="LLM provider for quality=high fallback")
+        sp.add_argument("--llm-base-url", default=cfg.get("llm_base_url", ""),
+                        help="Override base URL for OpenAI-compatible providers")
+        sp.add_argument("--llm-model", default=cfg.get("llm_model", ""),
+                        help="Model name to use")
+        sp.add_argument("--llm-api-key", default="",
+                        help="API key (prefer .env or plugin settings instead)")
         if name == "watch":
             sp.add_argument("--interval", type=int, default=cfg.get("interval", 5))
 
@@ -345,6 +438,15 @@ def main():
     if args.cmd == "setup":
         run_setup()
         return
+
+    # apply LLM provider env vars before calling pdfmux
+    if args.llm_provider:
+        apply_provider_env(
+            provider  = args.llm_provider,
+            api_key   = args.llm_api_key,
+            base_url  = args.llm_base_url,
+            model     = args.llm_model,
+        )
 
     convert_kwargs = dict(
         vault_dir  = args.vault,
