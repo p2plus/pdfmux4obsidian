@@ -1,8 +1,8 @@
 # pdfmux4obsidian
 
-Drop any PDF into your Obsidian vault as a clean Markdown note — frontmatter and all. One command, done.
+Drop any PDF into your Obsidian vault as a clean Markdown note — frontmatter, body, confidence scores and all. One command.
 
-Built on top of **[pdfmux](https://github.com/NameetP/pdfmux) by [NameetP](https://github.com/NameetP)** — a genuinely clever PDF extraction orchestrator that routes each page to the best available backend (PyMuPDF, OCR, table parsers, optional LLM fallback). This repo is just a thin Obsidian-friendly wrapper around that.
+Built on **[pdfmux](https://github.com/NameetP/pdfmux) by [NameetP](https://github.com/NameetP)** — a smart PDF extraction orchestrator that routes each page to the best available backend (PyMuPDF, OCR, table parsers, optional LLM fallback). This repo is the Obsidian glue layer on top.
 
 ---
 
@@ -13,20 +13,31 @@ paper.pdf  →  vault/Inbox/paper.md
 ```
 
 Each note gets:
-- YAML frontmatter (title, date, source path, tags, page count)
-- Clean extracted body text
-- Optional structured output when you pass a schema (`invoice`, `resume`, `paper`, …)
-- Optional chunked output for RAG-style notes
+
+- YAML frontmatter: title, date, source path, tags, page count, confidence score
+- Clean extracted body text (markdown-formatted by pdfmux)
+- Optional structured output when you pass a `--schema` (invoice, resume, paper, …)
+- Optional chunked output via `--chunk N` for RAG-style notes
 
 ---
 
 ## Setup
 
+Python 3.11+ required.
+
 ```bash
-pip install pdfmux PyMuPDF
+pip install pdfmux
 ```
 
-That's it. No config files, no daemons, nothing fancy.
+For scanned PDFs, tables, or complex layouts:
+
+```bash
+pip install "pdfmux[ocr]"           # RapidOCR — scanned/image pages
+pip install "pdfmux[tables]"        # Docling — table-heavy docs
+pip install "pdfmux[all]"           # everything
+```
+
+No other dependencies. No config file needed.
 
 ---
 
@@ -37,24 +48,25 @@ That's it. No config files, no daemons, nothing fancy.
 python pdfmux4obsidian.py convert paper.pdf --vault ~/vault/Inbox
 ```
 
-**With a schema (structured extraction):**
+**With a schema — structured extraction:**
 ```bash
 python pdfmux4obsidian.py convert invoice.pdf --schema invoice --vault ~/vault/Docs
 ```
 
-**Chunked output (good for longer docs you want to query later):**
+**Chunked output — good for longer docs you want to query later:**
 ```bash
 python pdfmux4obsidian.py convert report.pdf --chunk 500 --vault ~/vault/Research
 ```
 
-**Watch a folder — new PDFs get converted automatically:**
+**Higher quality for tricky PDFs (scans, mixed layouts):**
 ```bash
-python pdfmux4obsidian.py watch ~/Downloads --vault ~/vault/Inbox
+python pdfmux4obsidian.py convert scan.pdf --quality high --vault ~/vault/Inbox
 ```
 
-**With an LLM in the loop for tricky pages:**
+**Watch mode — new PDF in the folder? Gets converted automatically:**
 ```bash
-python pdfmux4obsidian.py convert scan.pdf --llm claude --cost-mode balanced --vault ~/vault/Inbox
+python pdfmux4obsidian.py watch ~/Downloads --vault ~/vault/Inbox
+python pdfmux4obsidian.py watch ~/Downloads --vault ~/vault/Inbox --interval 10
 ```
 
 ---
@@ -68,18 +80,21 @@ date: 2024-01-15
 source: "/Users/you/Downloads/paper.pdf"
 tags: [pdf, pdfmux]
 pages: 12
+confidence: 0.94
 ---
+
+# Introduction
 
 Lorem ipsum extracted content here...
 ```
 
-The source path lets you link back to the original file from within Obsidian.
+The `source` field lets you link back to the original file from within Obsidian. The `confidence` score comes directly from pdfmux's extraction audit.
 
 ---
 
 ## Schemas
 
-pdfmux ships five built-in extraction schemas. Pass `--schema <name>`:
+Pass `--schema <name>` to get structured extraction instead of raw text:
 
 | Schema     | What it pulls out                            |
 |------------|----------------------------------------------|
@@ -89,30 +104,33 @@ pdfmux ships five built-in extraction schemas. Pass `--schema <name>`:
 | `resume`   | name, contact, experience, education, skills |
 | `paper`    | title, abstract, authors, references         |
 
----
-
-## Cost modes
-
-pdfmux's `--cost-mode` controls which backends get used:
-
-- `economy` — rule-based only, free, default
-- `balanced` — rule-based + LLM fallback on hard pages
-- `premium` — LLM on everything
+Schema output is rendered as a structured Markdown note, not raw JSON.
 
 ---
 
-## Options
+## Quality modes
+
+Controls which backends pdfmux uses:
+
+| Flag              | When to use                            |
+|-------------------|----------------------------------------|
+| `--quality fast`  | digital-text PDFs, speed matters       |
+| `--quality standard` | default, good for most docs        |
+| `--quality high`  | scans, mixed layouts, tricky tables    |
+
+---
+
+## All options
 
 ```
 convert <pdf> --vault <dir>
-  --schema   invoice | receipt | contract | resume | paper
-  --cost-mode  economy | balanced | premium  (default: economy)
-  --llm        gemini | claude | gpt4o | ollama
-  --chunk N    chunk output at N tokens
-  --overwrite  replace existing note
+  --schema    invoice | receipt | contract | resume | paper
+  --quality   fast | standard | high  (default: standard)
+  --chunk N   RAG-ready chunks, max N tokens each
+  --overwrite replace existing note
 
 watch <dir> --vault <dir>
-  (same options as convert, plus:)
+  --schema, --quality, --chunk, --overwrite  (same as convert)
   --interval N   poll every N seconds (default: 5)
 ```
 
@@ -120,7 +138,7 @@ watch <dir> --vault <dir>
 
 ## Credit
 
-All the actual extraction magic is **[pdfmux](https://github.com/NameetP/pdfmux)** — go give [NameetP](https://github.com/NameetP) a star if this is useful to you. This repo is just the Obsidian glue layer on top.
+All extraction logic is **[pdfmux](https://github.com/NameetP/pdfmux)** — go give [NameetP](https://github.com/NameetP) a star if this is useful to you. This repo is just a thin wrapper that speaks Obsidian.
 
 ---
 
