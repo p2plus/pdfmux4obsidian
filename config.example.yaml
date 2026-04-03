@@ -1,0 +1,19 @@
+# pdfmux4obsidian — config template
+# Copy to config.yaml and edit. CLI args override these.
+# Or just run: python pdfmux4obsidian.py setup
+
+# Vault subfolder for converted notes
+vault: ~/Documents/Obsidian/PDFs
+
+# Extraction quality: fast | standard | high
+quality: standard
+
+# Default schema (optional) — uncomment to always use structured extraction
+# schema: paper      # invoice | receipt | contract | resume | paper
+
+# Watch mode poll interval in seconds
+interval: 5
+
+# LLM provider for hard pages (optional)
+# Requires: pip install 'pdfmux[llm]'
+# llm_provider: gemini    # gemini | claude | openai | ollama

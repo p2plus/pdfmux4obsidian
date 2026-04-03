@@ -1,3 +1,12 @@
+# core — required
 pdfmux>=0.1.0
-# optional but recommended — gives PyMuPDF-backed page count in frontmatter
-PyMuPDF
+
+# optional backends (install what you need)
+# pdfmux[ocr]           — RapidOCR for scanned / image-only pages
+# pdfmux[tables]        — Docling for table-heavy documents
+# pdfmux[opendataloader]— complex multi-column layouts
+# pdfmux[llm]           — LLM fallback (Gemini / Claude / GPT-4o / Ollama)
+# pdfmux[all]           — everything above
+
+# for config.yaml support in CLI mode
+PyYAML

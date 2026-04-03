@@ -1,0 +1,16 @@
+{
+  "name": "pdfmux4obsidian",
+  "version": "0.1.0",
+  "description": "Obsidian plugin — convert PDFs to notes via pdfmux",
+  "main": "main.js",
+  "scripts": {
+    "dev":   "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "devDependencies": {
+    "@types/node":     "^20.0.0",
+    "esbuild":         "^0.20.0",
+    "obsidian":        "latest",
+    "typescript":      "^5.0.0"
+  }
+}

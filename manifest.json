@@ -1,0 +1,10 @@
+{
+  "id": "pdfmux4obsidian",
+  "name": "pdfmux4obsidian",
+  "version": "0.1.0",
+  "minAppVersion": "0.15.0",
+  "description": "Convert PDFs into Obsidian notes via pdfmux — OCR, table parsing, structured schemas, LLM fallback.",
+  "author": "p2plus",
+  "authorUrl": "https://github.com/p2plus/pdfmux4obsidian",
+  "isDesktopOnly": true
+}
